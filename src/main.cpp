@@ -9,14 +9,88 @@
 
 #include <iostream>
 #include <vector>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
 
-void loadTriangleMesh(const std::string & filename,
+bool loadTriangleMesh(const std::string & filename,
 	std::vector<glm::vec3> & positions,
 	std::vector<glm::vec3> & normals,
 	std::vector<glm::vec2> & textureCoordinates,
 	std::vector<size_t> & positionIndices,
 	std::vector<size_t> & normalsIndices,
-	std::vector<size_t> & textureCoordinates)
+	std::vector<size_t> & textureCoordinatesIndices) 
+	{
+		std::ifstream file (filename, std::ifstream::in);
+		
+		if(!file.is_open())
+			return false;
+		else {
+			std::string line;
+			
+			while (std::getline (file, line)) {
+				std::istringstream atribute (line);
+				std::string type;
+				atribute>>type;
+				
+				if(type == "v") {
+					glm::vec3 p;
+					atribute>>p.x>>p.y>>p.z;
+					positions.push_back(p);
+				}
+				else if (type == "vn") { //normal
+					glm::vec3 n;
+					atribute>>n.x>>n.y>>n.z;
+					normals.push_back(n);
+				}
+				else if (type == "vt") {
+					glm::vec2 t;
+					atribute>>t.x>>t.y;
+					textureCoordinates.push_back(t);
+				}
+				else if (type == "f") { //faceta
+					for(int i=0; i<3; i++) {
+						std::string indices;
+						atribute>>indices;
+						
+						std::replace(indices.begin(), indices.end(), '/', ' ');
+						//std::cout<<indices<<std::endl;
+						
+						size_t vi;
+						std::istringstream ind (indices);
+						ind>>vi;
+						positionIndices.push_back(vi-1);
+						
+						if(ind.peek() == ' '){
+							ind.ignore();
+							if(ind.peek() == ' '){
+								ind.ignore();	
+								size_t vn;
+								ind>>vn;
+								normalsIndices.push_back(vn-1);	
+							}
+							else {
+								size_t vt;
+								ind>>vt;
+								textureCoordinatesIndices.push_back(vt-1);
+								if(ind.peek() == ' '){
+									ind.ignore();
+									size_t vn;
+									ind>>vn;
+									normalsIndices.push_back(vn-1);
+								}		
+							}
+						}
+						 
+					}
+				}
+			
+			}
+			return true;
+		}	
+		
+	}
 
 bool BACKGROUND_STATE = false;
 
@@ -34,6 +108,22 @@ void keyboard
 }
 
 int main(int argc, char** argv) {
+	std::vector<glm::vec3> positions;
+	std::vector<glm::vec3> normals;
+	std::vector<glm::vec2> textureCoordinates;
+	std::vector<size_t> positionIndices;
+	std::vector<size_t> normalsIndices;
+	std::vector<size_t> textureCoordinatesIndices;
+	
+	loadTriangleMesh("../res/meshes/bunny.obj", positions, normals, textureCoordinates,
+	positionIndices, normalsIndices, textureCoordinatesIndices);
+	
+	std::cout<<glm::to_string(positions[positionIndices[0]])<<std::endl;
+	std::cout<<glm::to_string(positions[positionIndices[1]])<<std::endl;
+	std::cout<<glm::to_string(positions[positionIndices[2]])<<std::endl;
+	
+	
+	
 	glm::vec3 u(2.0f, 0, 0);
 	glm::vec3 v(0, 1.0f, 0);
 	
@@ -44,7 +134,7 @@ int main(int argc, char** argv) {
 	4, 5, 6, 
 	7, 8, 9);
 	
-	std::cout << glm::to_string(m[0][0]) << std::endl;
+	std::cout << glm::to_string(m[0]) << std::endl;
 	
 	// Check GlFW initialization
 	if (!glfwInit()){
